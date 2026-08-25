@@ -1,0 +1,19 @@
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+  backend:
+    build: ./backend
+    environment:
+      MONGO_URI: mongodb://mongodb:27017
+      MONGO_DB: library_management
+      JWT_SECRET: change-this-secret
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+volumes:
+  mongo_data:
