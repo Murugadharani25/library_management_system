@@ -1,0 +1,50 @@
+[
+  {
+    "_id": {
+      "$oid": "6a8d51fff88eb8ce36e98eda"
+    },
+    "name": "Demo Student",
+    "email": "student@library.com",
+    "phone": "9876543210",
+    "role": "student",
+    "department": "Computer Science",
+    "year": "3",
+    "join_date": {
+      "$date": "2026-08-25T13:57:43.317Z"
+    },
+    "status": "Active",
+    "user_id": "6a8d51fff88eb8ce36e98ed8"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d51fff88eb8ce36e98edb"
+    },
+    "name": "Demo Teacher",
+    "email": "teacher@library.com",
+    "phone": "9876543211",
+    "role": "teacher",
+    "department": "Computer Science",
+    "year": "",
+    "join_date": {
+      "$date": "2026-08-25T13:57:43.317Z"
+    },
+    "status": "Active",
+    "user_id": "6a8d51fff88eb8ce36e98ed9"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d582fe73ad148304d66f5"
+    },
+    "name": "Dharani",
+    "email": "murugadharanik@gmail.com",
+    "phone": "9344982185",
+    "role": "student",
+    "department": "EEE",
+    "year": "1",
+    "join_date": {
+      "$date": "2026-08-25T14:24:07.032Z"
+    },
+    "status": "Active",
+    "user_id": "6a8d582fe73ad148304d66f4"
+  }
+]

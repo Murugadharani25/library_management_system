@@ -1,0 +1,14 @@
+[
+  {
+    "_id": {
+      "$oid": "6a8d51fff88eb8ce36e98edc"
+    },
+    "loan_period_days": 1,
+    "fine_per_day": 5,
+    "maximum_fine": 500,
+    "updated_by": "admin@library.com",
+    "updated_at": {
+      "$date": "2026-08-25T14:21:36.235Z"
+    }
+  }
+]

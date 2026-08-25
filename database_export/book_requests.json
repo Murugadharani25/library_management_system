@@ -1,0 +1,34 @@
+[
+  {
+    "_id": {
+      "$oid": "6a8d5c25aa89ef9bc70792e6"
+    },
+    "book_id": "6a8d46a17f80220904db72ec",
+    "user_id": "6a8d51fff88eb8ce36e98ed8",
+    "role": "student",
+    "requested_at": {
+      "$date": "2026-08-25T14:41:01.228Z"
+    },
+    "status": "Issued",
+    "issued_at": {
+      "$date": "2026-08-25T14:41:01.457Z"
+    },
+    "issued_by": "admin@library.com"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d5c25aa89ef9bc70792e7"
+    },
+    "book_id": "6a8d46a17f80220904db72ea",
+    "user_id": "6a8d51fff88eb8ce36e98ed9",
+    "role": "teacher",
+    "requested_at": {
+      "$date": "2026-08-25T14:41:01.375Z"
+    },
+    "status": "Issued",
+    "issued_at": {
+      "$date": "2026-08-25T15:05:30.736Z"
+    },
+    "issued_by": "admin@library.com"
+  }
+]

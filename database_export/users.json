@@ -1,0 +1,41 @@
+[
+  {
+    "_id": {
+      "$oid": "6a8d51fff88eb8ce36e98ed7"
+    },
+    "name": "Library Admin",
+    "email": "admin@library.com",
+    "password": "scrypt:32768:8:1$KRUTFpMOM6SVpMCW$8639d50f533b1dc5e4e1211a9d54042200ea665135c0a106da3199f8bfe20ec7b9b4e75cfc2c665fae3b2f85f04e693390699d3b6e3cf28330a7e32e083f6c91",
+    "role": "admin"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d51fff88eb8ce36e98ed8"
+    },
+    "name": "Demo Student",
+    "email": "student@library.com",
+    "password": "scrypt:32768:8:1$2P5Auu8cZsG4a1dy$83fb409bed5aaf18f9ce5edcc9f0dca4ff1cec13578a36885b549938012ed35a21f9518764f3c8ff90e0e6dffbc4345a56848f082b5a0d8b9257adf33bc36934",
+    "role": "student"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d51fff88eb8ce36e98ed9"
+    },
+    "name": "Demo Teacher",
+    "email": "teacher@library.com",
+    "password": "scrypt:32768:8:1$NWGmSJgOsVZFWxZj$a1f58934264d40c66f5ac0e541403dd642546dfced215ee4caf8e9c687d57f067ba6eb99265d89828d970786afdd6600621a1012869651a5b7f45342343b289c",
+    "role": "teacher"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d582fe73ad148304d66f4"
+    },
+    "name": "Dharani",
+    "email": "murugadharanik@gmail.com",
+    "password": "scrypt:32768:8:1$sB0zeZq3qeMPhms6$fe0423cb5f2a9b9a92ed97cd6b09f6a6fa44388886cbeb740148b183b9d28ab6d3f4b838ce94e49065ceb718fdefcd27572a371ef3631fab9a2254b6d799ed01",
+    "role": "student",
+    "created_at": {
+      "$date": "2026-08-25T14:24:07.031Z"
+    }
+  }
+]

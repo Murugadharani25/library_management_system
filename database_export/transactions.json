@@ -1,0 +1,102 @@
+[
+  {
+    "_id": {
+      "$oid": "6a8d4a4ba2288f878c87e34a"
+    },
+    "book_id": "6a8d46a17f80220904db72ec",
+    "member_id": "6a8d46a17f80220904db72ed",
+    "issue_date": {
+      "$date": "2026-08-25T13:24:51.892Z"
+    },
+    "due_date": {
+      "$date": "2026-09-08T13:24:51.892Z"
+    },
+    "return_date": {
+      "$date": "2026-08-25T13:25:25.162Z"
+    },
+    "fine": 0,
+    "status": "Returned"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d4a82a2288f878c87e34b"
+    },
+    "book_id": "6a8d4a01a2288f878c87e349",
+    "member_id": "6a8d46a17f80220904db72ed",
+    "issue_date": {
+      "$date": "2026-08-25T13:25:46.483Z"
+    },
+    "due_date": {
+      "$date": "2026-09-08T13:25:46.483Z"
+    },
+    "return_date": {
+      "$date": "2026-08-25T13:26:46.275Z"
+    },
+    "fine": 0,
+    "status": "Returned"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d4ae9a2288f878c87e34c"
+    },
+    "book_id": "6a8d46a17f80220904db72eb",
+    "member_id": "6a8d46a17f80220904db72ed",
+    "issue_date": {
+      "$date": "2026-08-25T13:27:29.795Z"
+    },
+    "due_date": {
+      "$date": "2026-09-08T13:27:29.795Z"
+    },
+    "return_date": null,
+    "fine": 0,
+    "status": "Issued"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d58e6e73ad148304d66f6"
+    },
+    "book_id": "6a8d46a17f80220904db72ec",
+    "member_id": "6a8d582fe73ad148304d66f5",
+    "issue_date": {
+      "$date": "2026-08-25T14:27:10.156Z"
+    },
+    "due_date": {
+      "$date": "2026-08-26T14:27:10.156Z"
+    },
+    "return_date": null,
+    "fine": 0,
+    "status": "Issued"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d5c25aa89ef9bc70792e8"
+    },
+    "book_id": "6a8d46a17f80220904db72ec",
+    "member_id": "6a8d51fff88eb8ce36e98eda",
+    "issue_date": {
+      "$date": "2026-08-25T14:41:01.457Z"
+    },
+    "due_date": {
+      "$date": "2026-08-26T14:41:01.457Z"
+    },
+    "return_date": null,
+    "fine": 0,
+    "status": "Issued"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d61e201b3c216e37b7a96"
+    },
+    "book_id": "6a8d46a17f80220904db72ea",
+    "member_id": "6a8d51fff88eb8ce36e98edb",
+    "issue_date": {
+      "$date": "2026-08-25T15:05:30.736Z"
+    },
+    "due_date": {
+      "$date": "2026-08-26T15:05:30.736Z"
+    },
+    "return_date": null,
+    "fine": 0,
+    "status": "Issued"
+  }
+]

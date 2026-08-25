@@ -1,0 +1,61 @@
+[
+  {
+    "_id": {
+      "$oid": "6a8d46a17f80220904db72ea"
+    },
+    "title": "Clean Code",
+    "author": "Robert C. Martin",
+    "isbn": "9780132350884",
+    "category": "Programming",
+    "publisher": "Prentice Hall",
+    "year": 2008,
+    "total_copies": 4,
+    "available_copies": 3,
+    "shelf": "P-01"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d46a17f80220904db72eb"
+    },
+    "title": "Python Crash Course",
+    "author": "Eric Matthes",
+    "isbn": "9781593279288",
+    "category": "Programming",
+    "publisher": "No Starch Press",
+    "year": 2023,
+    "total_copies": 5,
+    "available_copies": 4,
+    "shelf": "P-02"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d46a17f80220904db72ec"
+    },
+    "title": "Atomic Habits",
+    "author": "James Clear",
+    "isbn": "9780735211292",
+    "category": "Self Help",
+    "publisher": "Avery",
+    "year": 2018,
+    "total_copies": 3,
+    "available_copies": 1,
+    "shelf": "S-01"
+  },
+  {
+    "_id": {
+      "$oid": "6a8d4a01a2288f878c87e349"
+    },
+    "title": "sxdcv",
+    "author": "hbnm,",
+    "isbn": "12345",
+    "category": "Programming",
+    "publisher": "wsgb",
+    "year": 2026,
+    "total_copies": 1,
+    "available_copies": 1,
+    "shelf": "3",
+    "created_at": {
+      "$date": "2026-08-25T13:23:37.035Z"
+    }
+  }
+]
