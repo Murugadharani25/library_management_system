@@ -20,6 +20,7 @@ Full-stack mini project built with React, Django REST Framework, and MongoDB.
 - MongoDB running locally or a MongoDB Atlas URI
 
 ## Backend setup
+
 ```bash
 cd backend
 python -m venv venv
