@@ -10,11 +10,18 @@ urlpatterns = [
         name="login"
     ),
 
-    # Dashboard
+    # Admin Dashboard
     path(
         "dashboard/",
         views.dashboard,
         name="dashboard"
+    ),
+
+    # Student / Teacher Personal Dashboard
+    path(
+        "my-dashboard/",
+        views.my_dashboard,
+        name="my-dashboard"
     ),
 
     # Books
@@ -30,7 +37,41 @@ urlpatterns = [
         name="book-detail"
     ),
 
-    # Members
+    # Book Request (Student / Teacher)
+    path(
+        "books/<str:book_id>/request/",
+        views.request_book,
+        name="request-book"
+    ),
+
+    # My Requests (Student / Teacher)
+    path(
+        "my-requests/",
+        views.my_requests,
+        name="my-requests"
+    ),
+
+    # My Books (Student / Teacher)
+    path(
+        "my-books/",
+        views.my_books,
+        name="my-books"
+    ),
+
+    # Admin: Book Requests Management
+    path(
+        "admin/book-requests/",
+        views.admin_book_requests,
+        name="admin-book-requests"
+    ),
+
+    path(
+        "admin/book-requests/<str:request_id>/issue/",
+        views.admin_issue_request,
+        name="admin-issue-request"
+    ),
+
+    # Members (Admin Only)
     path(
         "members/",
         views.members,
@@ -54,6 +95,13 @@ urlpatterns = [
         "transactions/<str:tx_id>/return/",
         views.return_book,
         name="return-book"
+    ),
+
+    # Library Settings (Admin Only)
+    path(
+        "settings/",
+        views.settings_view,
+        name="settings"
     ),
 
     # Reservations

@@ -11,3 +11,5 @@ books = db.books
 members = db.members
 transactions = db.transactions
 reservations = db.reservations
+settings = db.settings
+book_requests = db.book_requests

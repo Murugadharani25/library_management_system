@@ -1,1 +1,715 @@
-*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;background:#f5f7fb;color:#172033}button,input{font:inherit}button{border:0;border-radius:9px;padding:10px 15px;background:#5b4bdb;color:white;cursor:pointer;font-weight:600}button:disabled{opacity:.45;cursor:not-allowed}.login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#f2efff,#f8fbff)}.login-card{width:min(430px,92%);background:white;padding:42px;border-radius:22px;box-shadow:0 20px 60px #26304b18}.logo,.brand{display:flex;gap:9px;align-items:center;font-weight:800;color:#5b4bdb}.logo{font-size:20px}.login h1{margin:30px 0 5px;font-size:32px}.login p{color:#697386}.login form{display:grid;gap:16px;margin:25px 0}.login label{font-size:13px;font-weight:700}.login input,.modal-card input{display:block;width:100%;padding:12px;margin-top:7px;border:1px solid #dde2eb;border-radius:9px;outline:none}.login button{width:100%;padding:13px}.login small{color:#7b8494;line-height:1.8}.error{padding:10px;background:#fff0f0;color:#bd2e2e;border-radius:8px}.app{display:flex;min-height:100vh}.app aside{width:235px;background:#fff;border-right:1px solid #e8ebf1;padding:25px 15px;display:flex;flex-direction:column}.brand{font-size:17px;padding:0 10px 30px}.nav{display:grid;gap:5px}.nav button{background:transparent;color:#687285;text-align:left;display:flex;gap:12px;align-items:center}.nav button.active,.nav button:hover{background:#f0edff;color:#5b4bdb}.logout{margin-top:auto;background:#f5f6f9;color:#697386;display:flex;gap:10px;align-items:center}.app main{flex:1;padding:30px 38px;overflow:auto}.app header{display:flex;justify-content:space-between;margin-bottom:28px}.app header h2{margin:0 0 5px;font-size:27px}.app header span{color:#7c8493}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:15px}.stat{background:white;border:1px solid #e9edf4;padding:20px;border-radius:14px}.stat span{display:block;color:#788193;font-size:13px}.stat strong{display:block;font-size:27px;margin-top:10px}.panel{background:#fff;border:1px solid #e9edf4;border-radius:15px;margin-top:24px;padding:22px}.panel h3{margin-top:0}.actions{display:flex;gap:12px}.actions button{display:flex;align-items:center;gap:8px}.toolbar{display:flex;justify-content:space-between;gap:15px;margin-bottom:18px}.search{display:flex;align-items:center;border:1px solid #dde2eb;border-radius:9px;padding:0 11px;max-width:450px;flex:1}.search input{border:0;outline:0;padding:11px;width:100%}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:760px}th,td{text-align:left;padding:14px 12px;border-bottom:1px solid #eef0f4;font-size:14px}th{color:#737c8c;font-size:12px;text-transform:uppercase}small{color:#8a92a0}.pill{background:#eeeafd;color:#5b4bdb;padding:5px 9px;border-radius:20px;font-size:12px;font-weight:700}.small{padding:7px 10px;font-size:12px}.icon{background:transparent;color:#d14b5b;padding:7px}.modal{position:fixed;inset:0;background:#17203355;display:grid;place-items:center;padding:20px}.modal-card{background:#fff;width:min(500px,100%);padding:28px;border-radius:16px;display:grid;gap:10px}.modal-card h3{margin:0 0 8px}.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}.secondary{background:#eef0f5;color:#4d5665}@media(max-width:1000px){.stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.app aside{width:65px;padding:15px 8px}.brand{font-size:0;justify-content:center}.nav button{justify-content:center;font-size:0}.logout{font-size:0;justify-content:center}.app main{padding:20px}.stats{grid-template-columns:repeat(2,1fr)}.actions{flex-direction:column}}
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  background: #f5f7fb;
+  color: #172033;
+}
+
+button, input, select { font: inherit; }
+
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 15px;
+  background: #5b4bdb;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.1s, opacity 0.2s;
+}
+
+button:hover { background: #4a3bc7; }
+button:active { transform: scale(0.97); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #f2efff, #f8fbff);
+}
+
+.login-card {
+  width: min(430px, 92%);
+  background: white;
+  padding: 42px;
+  border-radius: 22px;
+  box-shadow: 0 20px 60px #26304b18;
+}
+
+.logo, .brand {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font-weight: 800;
+  color: #5b4bdb;
+}
+
+.logo { font-size: 20px; }
+
+.login h1 { margin: 30px 0 5px; font-size: 32px; }
+.login p { color: #697386; }
+
+.login form {
+  display: grid;
+  gap: 16px;
+  margin: 25px 0;
+}
+
+.login label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.login input,
+.modal-card input,
+.modal-card select,
+.form-select {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-top: 7px;
+  border: 1px solid #dde2eb;
+  border-radius: 9px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fff;
+}
+
+.login input:focus,
+.modal-card input:focus,
+.modal-card select:focus,
+.form-select:focus {
+  border-color: #5b4bdb;
+  box-shadow: 0 0 0 3px #5b4bdb18;
+}
+
+.login button { width: 100%; padding: 13px; }
+
+.credentials-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  color: #7b8494;
+  line-height: 1.8;
+}
+
+.error {
+  padding: 10px 14px;
+  background: #fff0f0;
+  color: #bd2e2e;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.success-banner {
+  padding: 12px 16px;
+  background: #edfff4;
+  color: #1a7a3d;
+  border: 1px solid #b7e8cc;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+/* ============================================================
+   APP LAYOUT
+   ============================================================ */
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app aside {
+  width: 235px;
+  background: #fff;
+  border-right: 1px solid #e8ebf1;
+  padding: 25px 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  font-size: 17px;
+  padding: 0 10px 30px;
+}
+
+.nav {
+  display: grid;
+  gap: 5px;
+}
+
+.nav button {
+  background: transparent;
+  color: #687285;
+  text-align: left;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav button.active,
+.nav button:hover {
+  background: #f0edff;
+  color: #5b4bdb;
+}
+
+.logout {
+  margin-top: auto;
+  background: #f5f6f9;
+  color: #697386;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.logout:hover {
+  background: #ebedf2;
+  color: #4d5665;
+}
+
+.app main {
+  flex: 1;
+  padding: 30px 38px;
+  overflow: auto;
+}
+
+.app header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.app header h2 {
+  margin: 0 0 5px;
+  font-size: 27px;
+}
+
+.app header span {
+  color: #7c8493;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ============================================================
+   ROLE BADGE
+   ============================================================ */
+.role-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #eeeafd;
+  color: #5b4bdb;
+}
+
+/* ============================================================
+   STATS GRID
+   ============================================================ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 15px;
+}
+
+.stats-personal {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stat {
+  background: white;
+  border: 1px solid #e9edf4;
+  padding: 20px;
+  border-radius: 14px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.stat:hover {
+  box-shadow: 0 4px 20px #26304b10;
+  transform: translateY(-2px);
+}
+
+.stat span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #788193;
+  font-size: 13px;
+}
+
+.stat strong {
+  display: block;
+  font-size: 27px;
+  margin-top: 10px;
+}
+
+.fine-amount {
+  color: #d14b5b !important;
+  font-weight: 700;
+}
+
+/* ============================================================
+   PANELS
+   ============================================================ */
+.panel {
+  background: #fff;
+  border: 1px solid #e9edf4;
+  border-radius: 15px;
+  margin-top: 24px;
+  padding: 22px;
+}
+
+.panel h3 {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.empty-msg {
+  color: #8a92a0;
+  text-align: center;
+  padding: 30px;
+  font-size: 15px;
+}
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-cell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ============================================================
+   TOOLBAR & SEARCH
+   ============================================================ */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 18px;
+  align-items: center;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dde2eb;
+  border-radius: 9px;
+  padding: 0 11px;
+  max-width: 450px;
+  flex: 1;
+  transition: border-color 0.2s;
+}
+
+.search:focus-within {
+  border-color: #5b4bdb;
+  box-shadow: 0 0 0 3px #5b4bdb12;
+}
+
+.search input {
+  border: 0;
+  outline: 0;
+  padding: 11px;
+  width: 100%;
+}
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+.tablewrap { overflow: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+th, td {
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 1px solid #eef0f4;
+  font-size: 14px;
+}
+
+th {
+  color: #737c8c;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+small { color: #8a92a0; }
+
+.overdue-row {
+  background: #fff8f8;
+}
+
+/* ============================================================
+   PILLS / BADGES
+   ============================================================ */
+.pill {
+  background: #eeeafd;
+  color: #5b4bdb;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.pill-danger {
+  background: #ffe8ea;
+  color: #d14b5b;
+}
+
+.pill-returned {
+  background: #e8f8ee;
+  color: #1a7a3d;
+}
+
+.pill-teacher {
+  background: #e8f0ff;
+  color: #2d6bd4;
+}
+
+.pill-student {
+  background: #eeeafd;
+  color: #5b4bdb;
+}
+
+.pill-inactive {
+  background: #f0f0f0;
+  color: #888;
+}
+
+/* ============================================================
+   BUTTONS VARIANTS
+   ============================================================ */
+.small {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.icon {
+  background: transparent;
+  color: #d14b5b;
+  padding: 7px;
+}
+
+.icon:hover {
+  background: #fff0f0;
+}
+
+.secondary {
+  background: #eef0f5;
+  color: #4d5665;
+}
+
+.secondary:hover {
+  background: #e2e5ec;
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: #17203355;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 100;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-card {
+  background: #fff;
+  width: min(500px, 100%);
+  padding: 28px;
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 { margin: 0; }
+
+.modal-card h3 { margin: 0 0 8px; }
+
+.modal-card label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* ============================================================
+   SETTINGS PAGE
+   ============================================================ */
+.settings-page {
+  max-width: 700px;
+}
+
+.settings-panel {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.settings-desc {
+  color: #788193;
+  font-size: 14px;
+  margin: 4px 0 18px;
+}
+
+.settings-field {
+  margin-bottom: 20px;
+}
+
+.settings-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #3d4655;
+}
+
+.settings-field input {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #dde2eb;
+  border-radius: 9px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.settings-field input:focus {
+  border-color: #5b4bdb;
+  box-shadow: 0 0 0 3px #5b4bdb18;
+}
+
+.loan-options {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.loan-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+}
+
+.loan-active {
+  background: #5b4bdb;
+  color: white;
+}
+
+.loan-custom {
+  width: 100px !important;
+  padding: 10px !important;
+  margin-top: 0 !important;
+}
+
+.settings-example {
+  background: #f9f8ff;
+  border: 1px solid #e8e5f5;
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 14px;
+  color: #4d5665;
+  line-height: 1.7;
+}
+
+.save-settings-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  margin-top: 8px;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1000px) {
+  .stats { grid-template-columns: repeat(3, 1fr); }
+  .stats-personal { grid-template-columns: repeat(2, 1fr); }
+  .stats-personal-wide { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 700px) {
+  .app aside {
+    width: 65px;
+    padding: 15px 8px;
+  }
+  .brand { font-size: 0; justify-content: center; }
+  .nav button { justify-content: center; font-size: 0; }
+  .logout { font-size: 0; justify-content: center; }
+  .app main { padding: 20px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .stats-personal { grid-template-columns: repeat(2, 1fr); }
+  .stats-personal-wide { grid-template-columns: repeat(2, 1fr); }
+  .actions { flex-direction: column; }
+  .action-cell { flex-wrap: wrap; }
+  .role-badge { font-size: 10px; }
+  .settings-page { max-width: 100%; }
+  .loan-options { flex-direction: column; align-items: flex-start; }
+  .dash-tabs { flex-wrap: wrap; }
+}
+
+/* ============================================================
+   PERSONAL DASHBOARD - WIDE STATS
+   ============================================================ */
+.stats-personal-wide {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+/* ============================================================
+   DASHBOARD TABS
+   ============================================================ */
+.dash-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 20px;
+  background: #fff;
+  border: 1px solid #e9edf4;
+  border-radius: 12px;
+  padding: 5px;
+  overflow-x: auto;
+}
+
+.dash-tab {
+  padding: 10px 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  color: #687285;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.dash-tab:hover {
+  background: #f5f3ff;
+  color: #5b4bdb;
+}
+
+.dash-tab-active {
+  background: #5b4bdb !important;
+  color: #fff !important;
+}
+
+/* ============================================================
+   REQUEST BUTTON
+   ============================================================ */
+.request-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #10b981;
+  font-size: 12px;
+  padding: 7px 12px;
+}
+
+.request-btn:hover {
+  background: #059669;
+}
+
+/* ============================================================
+   ADDITIONAL PILLS
+   ============================================================ */
+.pill-pending {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.pill-issued {
+  background: #e8f8ee;
+  color: #1a7a3d;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pill-available {
+  background: #e8f8ee;
+  color: #1a7a3d;
+}
+
+/* ============================================================
+   FINE ALERT
+   ============================================================ */
+.fine-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffcc80;
+  border-radius: 12px;
+  margin-top: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ============================================================
+   FILTER BUTTONS
+   ============================================================ */
+.filter-btns {
+  display: flex;
+  gap: 6px;
+}
+

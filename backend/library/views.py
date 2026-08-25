@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from .db import (
     users as users_collection,
@@ -12,10 +12,12 @@ from .db import (
     members as members_collection,
     transactions as transactions_collection,
     reservations as reservations_collection,
+    settings as settings_collection,
+    book_requests as book_requests_collection,
 )
 
 from .serializers import clean
-from .auth import token_for, require_auth
+from .auth import token_for, require_auth, require_admin
 from .seed import seed
 
 
@@ -32,6 +34,27 @@ def parse(request):
 
 def valid_object_id(value):
     return bool(value and ObjectId.is_valid(value))
+
+
+def get_settings():
+    """Retrieve library settings from MongoDB (with fallback defaults)."""
+    doc = settings_collection.find_one({})
+    if not doc:
+        return {
+            "loan_period_days": 14,
+            "fine_per_day": 5,
+            "maximum_fine": 500,
+        }
+    return {
+        "loan_period_days": doc.get("loan_period_days", 14),
+        "fine_per_day": doc.get("fine_per_day", 5),
+        "maximum_fine": doc.get("maximum_fine", 500),
+    }
+
+
+def get_member_for_user(user_id):
+    """Find the member document linked to a user ID."""
+    return members_collection.find_one({"user_id": user_id})
 
 
 # ---------------------------------------------------------
@@ -81,22 +104,31 @@ def login(request):
             status=401
         )
 
+    # Build response user info
+    user_info = {
+        "id": str(user["_id"]),
+        "name": user.get("name", ""),
+        "email": user.get("email", ""),
+        "role": user.get("role", "student"),
+    }
+
+    # For student/teacher, include their member_id
+    if user_info["role"] in ("student", "teacher"):
+        member = get_member_for_user(str(user["_id"]))
+        if member:
+            user_info["member_id"] = str(member["_id"])
+
     return JsonResponse({
         "token": token_for(user),
-        "user": {
-            "id": str(user["_id"]),
-            "name": user.get("name", ""),
-            "email": user.get("email", ""),
-            "role": user.get("role", "student"),
-        }
+        "user": user_info,
     })
 
 
 # ---------------------------------------------------------
-# Dashboard
+# Admin Dashboard
 # ---------------------------------------------------------
 
-@require_auth
+@require_admin
 def dashboard(request):
 
     if request.method != "GET":
@@ -136,6 +168,10 @@ def dashboard(request):
         )
     )
 
+    pending_requests = book_requests_collection.count_documents({
+        "status": "Pending"
+    })
+
     return JsonResponse({
         "total_books": total_books,
         "available_books": available_books,
@@ -143,6 +179,165 @@ def dashboard(request):
         "members": member_count,
         "overdue": overdue_count,
         "pending_fines": pending_fines,
+        "pending_requests": pending_requests,
+    })
+
+
+# ---------------------------------------------------------
+# My Dashboard (Student / Teacher)
+# ---------------------------------------------------------
+
+@require_auth
+def my_dashboard(request):
+
+    if request.method != "GET":
+        return JsonResponse(
+            {"detail": "GET required"},
+            status=405
+        )
+
+    user_id = request.user_claims.get("sub")
+    role = request.user_claims.get("role", "")
+
+    # Admins should use the /dashboard/ endpoint
+    if role == "admin":
+        return JsonResponse(
+            {"detail": "Use /api/dashboard/ for admin"},
+            status=400
+        )
+
+    member = get_member_for_user(user_id)
+
+    # Library-wide stats (visible to all users)
+    total_books = books_collection.count_documents({})
+    total_available = sum(
+        b.get("available_copies", 0)
+        for b in books_collection.find({}, {"available_copies": 1})
+    )
+
+    if not member:
+        return JsonResponse({
+            "name": request.user_claims.get("name", ""),
+            "role": role,
+            "total_books": total_books,
+            "total_available": total_available,
+            "issued_books": [],
+            "history": [],
+            "my_requests": [],
+            "total_fine_pending": 0,
+            "total_fine_paid": 0,
+        })
+
+    member_id = str(member["_id"])
+
+    # Currently issued books
+    issued_txs = list(transactions_collection.find({
+        "member_id": member_id,
+        "status": "Issued",
+    }))
+
+    issued_books = []
+    total_fine_pending = 0
+
+    today = datetime.now(timezone.utc).replace(tzinfo=None)
+    lib_settings = get_settings()
+
+    for tx in issued_txs:
+        book = None
+        book_id = tx.get("book_id")
+        if valid_object_id(book_id):
+            book = books_collection.find_one({"_id": ObjectId(book_id)})
+
+        due_date = tx.get("due_date", today)
+        late_days = max(0, (today - due_date).days)
+        current_fine = min(
+            late_days * lib_settings["fine_per_day"],
+            lib_settings["maximum_fine"]
+        )
+        total_fine_pending += current_fine
+
+        issued_books.append({
+            "id": str(tx["_id"]),
+            "book_title": book.get("title") if book else "Unknown Book",
+            "book_author": book.get("author") if book else "",
+            "issue_date": tx.get("issue_date", "").isoformat() if isinstance(tx.get("issue_date"), datetime) else str(tx.get("issue_date", "")),
+            "due_date": due_date.isoformat() if isinstance(due_date, datetime) else str(due_date),
+            "late_days": late_days,
+            "fine": current_fine,
+        })
+
+    # Borrowing history (returned books)
+    history_txs = list(transactions_collection.find({
+        "member_id": member_id,
+        "status": "Returned",
+    }).sort("return_date", -1))
+
+    history = []
+    total_fine_paid = 0
+
+    for tx in history_txs:
+        book = None
+        book_id = tx.get("book_id")
+        if valid_object_id(book_id):
+            book = books_collection.find_one({"_id": ObjectId(book_id)})
+
+        fine = tx.get("fine", 0)
+        total_fine_paid += fine
+
+        history.append({
+            "id": str(tx["_id"]),
+            "book_title": book.get("title") if book else "Unknown Book",
+            "book_author": book.get("author") if book else "",
+            "issue_date": tx.get("issue_date", "").isoformat() if isinstance(tx.get("issue_date"), datetime) else str(tx.get("issue_date", "")),
+            "due_date": tx.get("due_date", "").isoformat() if isinstance(tx.get("due_date"), datetime) else str(tx.get("due_date", "")),
+            "return_date": tx.get("return_date", "").isoformat() if isinstance(tx.get("return_date"), datetime) else str(tx.get("return_date", "")),
+            "fine": fine,
+        })
+
+    # My book requests
+    my_reqs = list(book_requests_collection.find({
+        "user_id": user_id,
+    }).sort("requested_at", -1))
+
+    my_requests = []
+    for req in my_reqs:
+        book = None
+        bid = req.get("book_id")
+        if valid_object_id(bid):
+            book = books_collection.find_one({"_id": ObjectId(bid)})
+        my_requests.append({
+            "id": str(req["_id"]),
+            "book_id": bid,
+            "book_title": book.get("title") if book else "Unknown Book",
+            "book_author": book.get("author") if book else "",
+            "requested_at": req.get("requested_at", "").isoformat() if isinstance(req.get("requested_at"), datetime) else str(req.get("requested_at", "")),
+            "status": req.get("status", "Pending"),
+        })
+
+    # Count pending returns (issued books = pending returns)
+    pending_returns = len(issued_books)
+
+    # Count my pending requests
+    my_pending_requests = book_requests_collection.count_documents({
+        "user_id": user_id,
+        "status": "Pending",
+    })
+
+    return JsonResponse({
+        "name": member.get("name", ""),
+        "role": role,
+        "department": member.get("department", ""),
+        "email": member.get("email", ""),
+        "total_books": total_books,
+        "total_available": total_available,
+        "my_issued_count": len(issued_books),
+        "pending_returns": pending_returns,
+        "my_pending_requests": my_pending_requests,
+        "issued_books": issued_books,
+        "history": history,
+        "my_requests": my_requests,
+        "total_fine_pending": total_fine_pending,
+        "total_fine_paid": total_fine_paid,
     })
 
 
@@ -155,7 +350,7 @@ def dashboard(request):
 def books(request, book_id=None):
 
     # -------------------------
-    # GET - List books
+    # GET - List books (all authenticated users can browse)
     # -------------------------
 
     if request.method == "GET":
@@ -380,14 +575,376 @@ def books(request, book_id=None):
 
 
 # ---------------------------------------------------------
-# Members
+# Book Request (Student / Teacher)
 # ---------------------------------------------------------
 
 @csrf_exempt
 @require_auth
+def request_book(request, book_id):
+    """Student/Teacher can request a book. POST only."""
+
+    if request.method != "POST":
+        return JsonResponse(
+            {"detail": "POST required"},
+            status=405
+        )
+
+    role = request.user_claims.get("role", "")
+    user_id = request.user_claims.get("sub", "")
+
+    # Only students and teachers can request books
+    if role not in ("student", "teacher"):
+        return JsonResponse(
+            {"detail": "Only students and teachers can request books"},
+            status=403
+        )
+
+    if not valid_object_id(book_id):
+        return JsonResponse(
+            {"detail": "Invalid book ID"},
+            status=400
+        )
+
+    book = books_collection.find_one({"_id": ObjectId(book_id)})
+    if not book:
+        return JsonResponse(
+            {"detail": "Book not found"},
+            status=404
+        )
+
+    # Check for duplicate pending request
+    existing = book_requests_collection.find_one({
+        "book_id": book_id,
+        "user_id": user_id,
+        "status": "Pending",
+    })
+
+    if existing:
+        return JsonResponse(
+            {"detail": "You already have a pending request for this book"},
+            status=409
+        )
+
+    # Also check if user already has this book issued
+    member = get_member_for_user(user_id)
+    if member:
+        existing_issue = transactions_collection.find_one({
+            "book_id": book_id,
+            "member_id": str(member["_id"]),
+            "status": "Issued",
+        })
+        if existing_issue:
+            return JsonResponse(
+                {"detail": "You already have this book issued"},
+                status=400
+            )
+
+    request_data = {
+        "book_id": book_id,
+        "user_id": user_id,
+        "role": role,
+        "requested_at": datetime.now(),
+        "status": "Pending",
+        "issued_at": None,
+        "issued_by": None,
+    }
+
+    book_requests_collection.insert_one(request_data)
+
+    return JsonResponse({
+        "message": "Book requested successfully",
+        "status": "Pending",
+    }, status=201)
+
+
+# ---------------------------------------------------------
+# My Requests (Student / Teacher)
+# ---------------------------------------------------------
+
+@require_auth
+def my_requests(request):
+    """GET own book requests."""
+
+    if request.method != "GET":
+        return JsonResponse(
+            {"detail": "GET required"},
+            status=405
+        )
+
+    user_id = request.user_claims.get("sub", "")
+
+    reqs = list(book_requests_collection.find({
+        "user_id": user_id,
+    }).sort("requested_at", -1))
+
+    request_list = []
+    for req in reqs:
+        book = None
+        bid = req.get("book_id")
+        if valid_object_id(bid):
+            book = books_collection.find_one({"_id": ObjectId(bid)})
+
+        request_list.append({
+            "id": str(req["_id"]),
+            "book_id": bid,
+            "book_title": book.get("title") if book else "Unknown Book",
+            "book_author": book.get("author") if book else "",
+            "requested_at": req.get("requested_at", "").isoformat() if isinstance(req.get("requested_at"), datetime) else str(req.get("requested_at", "")),
+            "status": req.get("status", "Pending"),
+        })
+
+    return JsonResponse({"requests": request_list})
+
+
+# ---------------------------------------------------------
+# My Books (Student / Teacher - currently issued)
+# ---------------------------------------------------------
+
+@require_auth
+def my_books(request):
+    """GET own currently issued books."""
+
+    if request.method != "GET":
+        return JsonResponse(
+            {"detail": "GET required"},
+            status=405
+        )
+
+    user_id = request.user_claims.get("sub", "")
+    member = get_member_for_user(user_id)
+
+    if not member:
+        return JsonResponse({"books": []})
+
+    member_id = str(member["_id"])
+    today = datetime.now(timezone.utc).replace(tzinfo=None)
+    lib_settings = get_settings()
+
+    issued_txs = list(transactions_collection.find({
+        "member_id": member_id,
+        "status": "Issued",
+    }))
+
+    my_book_list = []
+    for tx in issued_txs:
+        book = None
+        book_id = tx.get("book_id")
+        if valid_object_id(book_id):
+            book = books_collection.find_one({"_id": ObjectId(book_id)})
+
+        due_date = tx.get("due_date", today)
+        late_days = max(0, (today - due_date).days)
+        fine = min(
+            late_days * lib_settings["fine_per_day"],
+            lib_settings["maximum_fine"]
+        )
+
+        my_book_list.append({
+            "id": str(tx["_id"]),
+            "book_title": book.get("title") if book else "Unknown Book",
+            "book_author": book.get("author") if book else "",
+            "issue_date": tx.get("issue_date", "").isoformat() if isinstance(tx.get("issue_date"), datetime) else str(tx.get("issue_date", "")),
+            "due_date": due_date.isoformat() if isinstance(due_date, datetime) else str(due_date),
+            "status": "Issued",
+            "late_days": late_days,
+            "fine": fine,
+        })
+
+    return JsonResponse({"books": my_book_list})
+
+
+# ---------------------------------------------------------
+# Admin: View All Book Requests
+# ---------------------------------------------------------
+
+@require_admin
+def admin_book_requests(request):
+    """GET all book requests (admin only)."""
+
+    if request.method != "GET":
+        return JsonResponse(
+            {"detail": "GET required"},
+            status=405
+        )
+
+    reqs = list(book_requests_collection.find().sort("requested_at", -1))
+
+    request_list = []
+    for req in reqs:
+        # Get book info
+        book = None
+        bid = req.get("book_id")
+        if valid_object_id(bid):
+            book = books_collection.find_one({"_id": ObjectId(bid)})
+
+        # Get user info
+        user = None
+        uid = req.get("user_id")
+        if valid_object_id(uid):
+            user = users_collection.find_one({"_id": ObjectId(uid)})
+
+        # Get member info for member_id
+        member = None
+        if uid:
+            member = get_member_for_user(uid)
+
+        request_list.append({
+            "id": str(req["_id"]),
+            "book_id": bid,
+            "book_title": book.get("title") if book else "Unknown Book",
+            "book_author": book.get("author") if book else "",
+            "book_available": book.get("available_copies", 0) if book else 0,
+            "user_id": uid,
+            "user_name": user.get("name") if user else "Unknown User",
+            "user_email": user.get("email") if user else "",
+            "role": req.get("role", ""),
+            "member_id": str(member["_id"]) if member else None,
+            "requested_at": req.get("requested_at", "").isoformat() if isinstance(req.get("requested_at"), datetime) else str(req.get("requested_at", "")),
+            "status": req.get("status", "Pending"),
+        })
+
+    return JsonResponse({"requests": request_list})
+
+
+# ---------------------------------------------------------
+# Admin: Issue a Book Request
+# ---------------------------------------------------------
+
+@csrf_exempt
+@require_admin
+def admin_issue_request(request, request_id):
+    """Admin issues a book from a pending request."""
+
+    if request.method != "POST":
+        return JsonResponse(
+            {"detail": "POST required"},
+            status=405
+        )
+
+    if not valid_object_id(request_id):
+        return JsonResponse(
+            {"detail": "Invalid request ID"},
+            status=400
+        )
+
+    # Find the book request
+    book_req = book_requests_collection.find_one({
+        "_id": ObjectId(request_id)
+    })
+
+    if not book_req:
+        return JsonResponse(
+            {"detail": "Book request not found"},
+            status=404
+        )
+
+    if book_req.get("status") != "Pending":
+        return JsonResponse(
+            {"detail": f"Request is already {book_req.get('status', 'processed')}"},
+            status=400
+        )
+
+    book_id = book_req.get("book_id")
+    user_id = book_req.get("user_id")
+
+    # Validate book
+    if not valid_object_id(book_id):
+        return JsonResponse(
+            {"detail": "Invalid book ID in request"},
+            status=400
+        )
+
+    book = books_collection.find_one({"_id": ObjectId(book_id)})
+    if not book:
+        return JsonResponse(
+            {"detail": "Book not found"},
+            status=404
+        )
+
+    if book.get("available_copies", 0) < 1:
+        return JsonResponse(
+            {"detail": "No copies available. Cannot issue this book."},
+            status=400
+        )
+
+    # Find the member for the requesting user
+    member = get_member_for_user(user_id)
+    if not member:
+        return JsonResponse(
+            {"detail": "No member record found for this user"},
+            status=400
+        )
+
+    member_id = str(member["_id"])
+
+    # Check if member already has this book
+    existing_issue = transactions_collection.find_one({
+        "book_id": book_id,
+        "member_id": member_id,
+        "status": "Issued",
+    })
+
+    if existing_issue:
+        # Mark request as Issued since they already have it
+        book_requests_collection.update_one(
+            {"_id": ObjectId(request_id)},
+            {"$set": {"status": "Issued", "issued_at": datetime.now(),
+                       "issued_by": request.user_claims.get("email", "admin")}}
+        )
+        return JsonResponse(
+            {"detail": "This member already has this book issued"},
+            status=400
+        )
+
+    # Create the transaction
+    lib_settings = get_settings()
+    issue_date = datetime.now()
+    due_date = issue_date + timedelta(days=lib_settings["loan_period_days"])
+
+    transaction_data = {
+        "book_id": book_id,
+        "member_id": member_id,
+        "issue_date": issue_date,
+        "due_date": due_date,
+        "return_date": None,
+        "fine": 0,
+        "status": "Issued",
+    }
+
+    transactions_collection.insert_one(transaction_data)
+
+    # Decrease available copies
+    books_collection.update_one(
+        {"_id": ObjectId(book_id)},
+        {"$inc": {"available_copies": -1}}
+    )
+
+    # Update request status to Issued
+    book_requests_collection.update_one(
+        {"_id": ObjectId(request_id)},
+        {"$set": {
+            "status": "Issued",
+            "issued_at": issue_date,
+            "issued_by": request.user_claims.get("email", "admin"),
+        }}
+    )
+
+    return JsonResponse({
+        "message": "Book issued successfully from request",
+        "due_date": due_date.isoformat(),
+        "loan_days": lib_settings["loan_period_days"],
+    }, status=201)
+
+
+# ---------------------------------------------------------
+# Members (Admin Only)
+# ---------------------------------------------------------
+
+@csrf_exempt
+@require_admin
 def members(request):
 
-    # GET members
+    # GET members (admin only)
 
     if request.method == "GET":
 
@@ -404,16 +961,7 @@ def members(request):
         })
 
 
-    # Only admin can create members
-
-    if request.user_claims.get("role") != "admin":
-        return JsonResponse(
-            {"detail": "Admin only"},
-            status=403
-        )
-
-
-    # POST member
+    # POST member (admin only - creates member + login account)
 
     if request.method == "POST":
 
@@ -424,8 +972,11 @@ def members(request):
                 "detail": "Name and email are required"
             }, status=400)
 
+        email = data["email"].strip().lower()
+
+        # Check if member already exists
         existing = members_collection.find_one({
-            "email": data["email"].strip().lower()
+            "email": email
         })
 
         if existing:
@@ -433,10 +984,38 @@ def members(request):
                 "detail": "Member already exists"
             }, status=409)
 
+        # Determine role (default to student)
+        role = data.get("role", "student").strip().lower()
+        if role not in ("student", "teacher"):
+            role = "student"
+
+        # Auto-create login account in users collection
+        existing_user = users_collection.find_one({"email": email})
+
+        if existing_user:
+            user_id = str(existing_user["_id"])
+        else:
+            # Default password: <email-prefix>123
+            email_prefix = email.split("@")[0]
+            default_password = f"{email_prefix}123"
+
+            user_data = {
+                "name": data["name"].strip(),
+                "email": email,
+                "password": generate_password_hash(default_password),
+                "role": role,
+                "created_at": datetime.now(),
+            }
+
+            user_result = users_collection.insert_one(user_data)
+            user_id = str(user_result.inserted_id)
+
+        # Create the member document
         member_data = {
             "name": data["name"].strip(),
-            "email": data["email"].strip().lower(),
+            "email": email,
             "phone": data.get("phone", "").strip(),
+            "role": role,
             "department": data.get(
                 "department",
                 ""
@@ -449,6 +1028,7 @@ def members(request):
                 "status",
                 "Active"
             ),
+            "user_id": user_id,
         }
 
         result = members_collection.insert_one(
@@ -459,8 +1039,14 @@ def members(request):
             "_id": result.inserted_id
         })
 
+        # Return the created member with the default password info
+        response = clean(created_member)
+        if not existing_user:
+            email_prefix = email.split("@")[0]
+            response["default_password"] = f"{email_prefix}123"
+
         return JsonResponse(
-            clean(created_member),
+            response,
             status=201
         )
 
@@ -471,7 +1057,7 @@ def members(request):
 
 
 # ---------------------------------------------------------
-# Transactions - List
+# Transactions
 # ---------------------------------------------------------
 
 @csrf_exempt
@@ -483,9 +1069,24 @@ def transactions(request):
             "detail": "GET required"
         }, status=405)
 
+    role = request.user_claims.get("role", "")
+    user_id = request.user_claims.get("sub", "")
+
+    # Build query filter based on role
+    query_filter = {}
+
+    if role != "admin":
+        # Student/Teacher: only see their own transactions
+        member = get_member_for_user(user_id)
+        if member:
+            query_filter["member_id"] = str(member["_id"])
+        else:
+            # No member record found, return empty
+            return JsonResponse({"transactions": []})
+
     transaction_list = []
 
-    for transaction in transactions_collection.find().sort(
+    for transaction in transactions_collection.find(query_filter).sort(
         "issue_date",
         -1
     ):
@@ -530,11 +1131,11 @@ def transactions(request):
 
 
 # ---------------------------------------------------------
-# Issue Book
+# Issue Book (Admin Only)
 # ---------------------------------------------------------
 
 @csrf_exempt
-@require_auth
+@require_admin
 def issue_book(request):
 
     if request.method != "POST":
@@ -595,15 +1196,9 @@ def issue_book(request):
 
     issue_date = datetime.now()
 
-    try:
-        loan_days = int(
-            data.get("days", 14)
-        )
-    except (ValueError, TypeError):
-        loan_days = 14
-
-    if loan_days < 1:
-        loan_days = 14
+    # Use loan period from settings
+    lib_settings = get_settings()
+    loan_days = lib_settings["loan_period_days"]
 
     due_date = issue_date + timedelta(
         days=loan_days
@@ -634,16 +1229,17 @@ def issue_book(request):
 
     return JsonResponse({
         "message": "Book issued successfully",
-        "due_date": due_date.isoformat()
+        "due_date": due_date.isoformat(),
+        "loan_days": loan_days,
     }, status=201)
 
 
 # ---------------------------------------------------------
-# Return Book
+# Return Book (Admin Only)
 # ---------------------------------------------------------
 
 @csrf_exempt
-@require_auth
+@require_admin
 def return_book(request, tx_id):
 
     if request.method != "POST":
@@ -682,10 +1278,15 @@ def return_book(request, tx_id):
         (return_date - due_date).days
     )
 
-    # Fine = ₹5 per late day
+    # Fine from settings (not hardcoded)
+    lib_settings = get_settings()
+    fine_per_day = lib_settings["fine_per_day"]
+    maximum_fine = lib_settings["maximum_fine"]
 
-    fine_per_day = 5
-    fine = late_days * fine_per_day
+    fine = min(
+        late_days * fine_per_day,
+        maximum_fine
+    )
 
     transactions_collection.update_one(
         {"_id": ObjectId(tx_id)},
@@ -716,6 +1317,96 @@ def return_book(request, tx_id):
         "late_days": late_days,
         "fine": fine
     })
+
+
+# ---------------------------------------------------------
+# Library Settings (Admin Only)
+# ---------------------------------------------------------
+
+@csrf_exempt
+@require_admin
+def settings_view(request):
+
+    # GET - Retrieve current settings
+    if request.method == "GET":
+        doc = settings_collection.find_one({})
+        if not doc:
+            return JsonResponse({
+                "loan_period_days": 14,
+                "fine_per_day": 5,
+                "maximum_fine": 500,
+            })
+        return JsonResponse({
+            "loan_period_days": doc.get("loan_period_days", 14),
+            "fine_per_day": doc.get("fine_per_day", 5),
+            "maximum_fine": doc.get("maximum_fine", 500),
+        })
+
+    # PUT - Update settings
+    if request.method == "PUT":
+        data = parse(request)
+
+        update_fields = {}
+
+        if "loan_period_days" in data:
+            try:
+                val = int(data["loan_period_days"])
+                if val < 1:
+                    val = 1
+                update_fields["loan_period_days"] = val
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    "detail": "Invalid loan_period_days"
+                }, status=400)
+
+        if "fine_per_day" in data:
+            try:
+                val = int(data["fine_per_day"])
+                if val < 0:
+                    val = 0
+                update_fields["fine_per_day"] = val
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    "detail": "Invalid fine_per_day"
+                }, status=400)
+
+        if "maximum_fine" in data:
+            try:
+                val = int(data["maximum_fine"])
+                if val < 0:
+                    val = 0
+                update_fields["maximum_fine"] = val
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    "detail": "Invalid maximum_fine"
+                }, status=400)
+
+        if not update_fields:
+            return JsonResponse({
+                "detail": "No valid fields to update"
+            }, status=400)
+
+        update_fields["updated_by"] = request.user_claims.get("email", "admin")
+        update_fields["updated_at"] = datetime.now()
+
+        settings_collection.update_one(
+            {},
+            {"$set": update_fields},
+            upsert=True
+        )
+
+        # Return updated settings
+        doc = settings_collection.find_one({})
+        return JsonResponse({
+            "loan_period_days": doc.get("loan_period_days", 14),
+            "fine_per_day": doc.get("fine_per_day", 5),
+            "maximum_fine": doc.get("maximum_fine", 500),
+            "message": "Settings updated successfully",
+        })
+
+    return JsonResponse({
+        "detail": "Method not allowed"
+    }, status=405)
 
 
 # ---------------------------------------------------------
@@ -835,6 +1526,8 @@ def seed_data(request):
             "admin_password": "admin123",
             "student_email": "student@library.com",
             "student_password": "student123",
+            "teacher_email": "teacher@library.com",
+            "teacher_password": "teacher123",
         })
 
     except Exception as error:
